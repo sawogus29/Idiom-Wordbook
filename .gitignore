@@ -1,0 +1,3 @@
+/.vscode
+/__pycache__
+/model_save/pytorch_model.bin
