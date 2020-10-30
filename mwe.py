@@ -1,3 +1,4 @@
+import logging
 import torch
 import numpy as np
 import csv
@@ -136,7 +137,11 @@ def get_MWE_at_offset(sent, sel_offset):
     _is_MWE, token_index = is_MWE(sel_offset, model_outputs)
     if _is_MWE:
         MWEs = gather_MWEs(model_outputs)
-        return pick_MWE_at_offset(sel_offset, MWEs)
+        try:
+            return pick_MWE_at_offset(sel_offset, MWEs)
+        except AssertionError as error:
+            logging.exception(error)
+            return get_word_by_token_index(token_index, model_outputs)
     else:
         return get_word_by_token_index(token_index, model_outputs)
             
@@ -202,6 +207,7 @@ def get_word_by_token_index(token_index, model_outputs):
     for _, token, offset in reversed(model_outputs[:token_index +1]):
         if token[:2] == '##':
             word = token[2:] + word
+            word_offset = (offset[0], word_offset[1]) if word_offset != (-1, -1) else offset
         else:
             word = token + word
             word_offset = (offset[0], word_offset[1]) if word_offset != (-1, -1) else offset
@@ -212,7 +218,7 @@ def get_word_by_token_index(token_index, model_outputs):
         return [(word, word_offset)]
 
     # forward search
-    for _, token, offset in model_outputs[token_index +1:]:
+    for _, token, offset in model_outputs[token_index+1:]:
         if token[:2] == '##':
             word += token[2:]
             word_offset = (word_offset[0], offset[1])
@@ -239,34 +245,52 @@ def gather_MWEs(model_outputs):
     BI = []
     bi = []
     for label, token, offset in model_outputs:
-        if label == 'B':
-            if len(BI) >0:
-                assert len(BI) != 1, f'B should be with I, B-offset: {offset}'
-                MWEs.append(BI)
-            
-            BI = []
-            BI.append((label, token, offset))
+        try:
+            if label == 'B':
+                if len(BI) >0:
+                    assert len(BI) != 1, f'B should be with I, B-offset: {offset}'
+                    MWEs.append(BI)
+                
+                BI = []
+                BI.append((label, token, offset))
 
-        if label == 'b':
-            if len(bi) >0:
-                assert len(bi) != 1, f'b should be with i, b-offset: {offset}'
-                MWEs.append(bi)
+            if label == 'b':
+                if len(bi) >0:
+                    assert len(bi) != 1, f'b should be with i, b-offset: {offset}'
+                    MWEs.append(bi)
+                
+                bi = []
+                bi.append((label, token, offset))
             
-            bi = []
-            bi.append((label, token, offset))
-        
-        if label == 'I':
-            assert len(BI) > 0, f'I needs preceding B, I-offset: {offset}'
-            BI.append((label, token, offset))
-        
-        if label == 'i':
-            assert len(bi) > 0, f'i needs preceding b, i-offset: {offset}'
-            bi.append((label, token, offset))
+            if label == 'I':
+                assert len(BI) > 0, f'I needs preceding B, I-offset: {offset}'
+                if token[:2] == '##': 
+                    # BI[-1][2][1] : end offset of last token in BI
+                    assert BI[-1][2][1] == offset[0], f'I starts with ## should not be dangling, I-offset: {offset}' 
 
-    if len(BI) > 0:
-        MWEs.append(BI)
-    
-    if len(bi) > 0:
-        MWEs.append(bi)
+                BI.append((label, token, offset))
+            
+            if label == 'i':
+                assert len(bi) > 0, f'i needs preceding b, i-offset: {offset}'
+                if token[:2] == '##': 
+                    # bi[-1][2][1] : end offset of last token in bi
+                    assert bi[-1][2][1] == offset[0], f'i starts with ## should not be dangling, i-offset: {offset}' 
+                
+                bi.append((label, token, offset))
+
+        except AssertionError as error:
+            logging.exception(error)
+
+    try:
+        if len(BI) > 0:
+            assert len(BI) != 1, f'len of BI should be more than 1, BI[0] : {BI[0]}'
+            MWEs.append(BI)
+        
+        if len(bi) > 0:
+            assert len(bi) != 1, f'len of bi should be more than 1, bi[0] : {bi[0]}'
+            MWEs.append(bi)
+            
+    except AssertionError as error:
+        logging.exception(error)
 
     return MWEs

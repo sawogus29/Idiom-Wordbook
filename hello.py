@@ -8,7 +8,7 @@ app = Flask(__name__)
 def hello_world():
     return 'Hello, World!'
 
-@app.route('/MWE-dict')
+@app.route('/MWE-dict', methods=['GET', 'POST'])
 def MWE_dict():
     json_data = request.get_json()
     sent = json_data['sent']

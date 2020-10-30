@@ -3,18 +3,8 @@ import six
 from google.cloud import translate_v2 as translate
 
 # TODO : Delete this when deploy!!!
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "C:\\Users\\jh\\Downloads\\wordbook-9084545ec0da.json"
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "C:\\Users\\jh\\Documents\\Idiom-Wordbook\\wordbook-292909-93303a11ead8.json"
 translate_client = translate.Client()
-
-def search_dict(text):
-    '''Search meaning of keyword
-    Parameters:
-    text (str): keyword to search
-    
-    Returns:
-    str: meaning of keywoard
-    '''
-    return text + "_meaning"
 
 # def search_dict(text):
 #     '''Search meaning of keyword
@@ -24,13 +14,23 @@ def search_dict(text):
 #     Returns:
 #     str: meaning of keywoard
 #     '''
-#     if isinstance(text, six.binary_type):
-#         text = text.decode('utf-8')
+#     return text + "_meaning"
+
+def search_dict(text):
+    '''Search meaning of keyword
+    Parameters:
+    text (str): keyword to search
     
-#     # Text can also be a sequence of strings, in which case this method
-#     # will return a sequence of results for each text.
-#     result = translate_client.translate(
-#         text, target_language='ko', source_language='en-US')
+    Returns:
+    str: meaning of keywoard
+    '''
+    if isinstance(text, six.binary_type):
+        text = text.decode('utf-8')
     
-#     return result['translatedText']
+    # Text can also be a sequence of strings, in which case this method
+    # will return a sequence of results for each text.
+    result = translate_client.translate(
+        text, target_language='ko', source_language='en')
+    
+    return result['translatedText']
     
