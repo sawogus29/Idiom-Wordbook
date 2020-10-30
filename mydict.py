@@ -3,7 +3,6 @@ import six
 from google.cloud import translate_v2 as translate
 
 # TODO : Delete this when deploy!!!
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "C:\\Users\\jh\\Documents\\Idiom-Wordbook\\wordbook-292909-93303a11ead8.json"
 translate_client = translate.Client()
 
 # def search_dict(text):
